@@ -1,24 +1,22 @@
-
 #include <Arduino.h>
-#include <HC-SR04.h>
+#include "HC-SR04.h"
+#include "RBE-200n-Lib.h"
 
-const int Trig = 16;
-const int Echo = 17;
+HCSR04 hcsr;
 
-Rangefinder rangefinder;
 
 void setup()
 {
+  hcsr.init();
   delay(1000);
   
   Serial.begin(115200);
   Serial.println("Velkommen til");
-
-  rangefinder.attach(Trig, Echo);
 }
 
 void loop() 
 {
-  Serial.print("Distance: ");
-  Serial.print(rangefinder.getDistanceCM());
+  //if (hcsr.checkPingTimer() | ECHO_RECD) {
+    Serial.println(hcsr.checkPingTimer());
+  //}
 }

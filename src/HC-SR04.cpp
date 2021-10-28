@@ -1,140 +1,104 @@
 #include "HC-SR04.h"
-#include "Timer.h"
 
-static TaskHandle_t complexHandlerTaskUS;
+#define TRIG_PIN 16      //for pinging -- not a great choice since this can hamper uploading
+#define PULSE_PIN 17    //for reading pulse
 
-Rangefinder * Rangefinder::list[MAX_POSSIBLE_INTERRUPT_RANGEFINDER] = { NULL, };
-int Rangefinder::numberOfFinders = 0;
-bool Rangefinder::timoutThreadStarted = false;
-bool Rangefinder::forceFire = false;
-int Rangefinder::pingIndex = 0;
+#define MB_WINDOW_DUR 50    //ms
 
-static long threadTimeout;
-/*
- * The procedure is to send a 10us pulse on the trigger line to
- * cause the ultrasonic burst to be sent out the speaker. When
- * that happens, the echo line will go high. When the echo from
- * the sound returns, the echo line will go low. This pulse length
- * is measured using the pulseIn function that returns the round-trip
- * time in microseconds which is then converted to centimeters and
- * returned.
- * The timer interrupt routine will send the 10us pulse every 100ms and
- * the sensor ISR will time from the rising edge to the falling edge.
- * This time is saved in "roundTripTime" and used to compute the distance.
- */
-void onTimer(void *param) {
-	Serial.println("Starting the Ultrasonic loop thread");
-	threadTimeout = millis();
-	while (1) {
-		vTaskDelay(10); //sleep 10ms
-		if (Rangefinder::forceFire)
-			Rangefinder::fire();
-		else
-			Rangefinder::checkTimeout();
-	}
-	Serial.println("ERROR Pid thread died!");
+// Here is the mb_ez1 object that we declared as in extern in the .h file
+HCSR04 hcsr_1;
 
+//ISR for reading the echoes. Or is it echos?
+void ISR_HCSR(void)
+{
+    hcsr_1.HCSR_ISR();
 }
 
+// Constructor. Nothing to see here. Move along.
+HCSR04::HCSR04(void) {}
 
-int Rangefinder::getTimeoutState() {
-	return millis() - threadTimeout;
+// Default init engages all interfaces
+void HCSR04::init(void)
+{
+    init(USE_ECHO | USE_CTRL_PIN);
 }
 
-void Rangefinder::checkTimeout() {
-	// check to see if an ultrasonic timed out
-	bool run = false;
-	run = Rangefinder::getTimeoutState() > 100;
-	if (run) {
-		//Serial.println("Ultrasonic thread timeout!");
-		fire();
-	}
+// Allows the user to select the interface
+void HCSR04::init(uint8_t interfaces)
+{
+    if(interfaces & USE_ECHO)
+    {
+        // assert ECHO pin is an input
+        pinMode(PULSE_PIN, INPUT);
+        attachInterrupt(PULSE_PIN, ISR_HCSR, CHANGE);
+    }
+
+    if(interfaces & USE_CTRL_PIN)
+    {
+        //control pin for commanding pings
+        pinMode(TRIG_PIN, OUTPUT);
+    }
 }
 
-
-void IRAM_ATTR sensorISRAll(void * arg) {
-	Rangefinder * obj=(Rangefinder *)arg;
-	obj->sensorISR();
-}
-
-void Rangefinder::fire() {
-	threadTimeout = millis();
-	forceFire = false;
-	if (Rangefinder::numberOfFinders > 0) {
-		// round robin all of the sensors to prevent cross talk
-		Rangefinder::pingIndex++;
-		if (Rangefinder::pingIndex == Rangefinder::numberOfFinders)
-			Rangefinder::pingIndex = 0;
-		digitalWrite(Rangefinder::list[Rangefinder::pingIndex]->triggerPin,
-		HIGH); // 10us pulse to start the process
-		delayMicroseconds(10);
-		digitalWrite(Rangefinder::list[Rangefinder::pingIndex]->triggerPin,
-		LOW);
-	}
-
-}
-void Rangefinder::sensorISR() {
-	portENTER_CRITICAL(&synch);
-	if (digitalRead(echoPin)) {
-		startTime = micros();
-	} else {
-		roundTripTime = micros() - startTime;
-		forceFire = true;
-	}
-	portEXIT_CRITICAL(&synch);
-}
-void Rangefinder::attach(int trigger, int echo) {
-	triggerPin = trigger;
-	echoPin = echo;
-	pinMode(triggerPin, OUTPUT);
-	pinMode(echoPin, INPUT);
-	if (Rangefinder::timoutThreadStarted == false) {
-		Serial.println("Spawing rangefinder timeout thread");
-		Rangefinder::timoutThreadStarted = true;
-		xTaskCreatePinnedToCore(onTimer, "Rangefinder Thread", 8192, NULL, 2, // low priority timout thread
-				&complexHandlerTaskUS, 0);
-	}
-	for (int i = 0; i < MAX_POSSIBLE_INTERRUPT_RANGEFINDER; i++) {
-		if (Rangefinder::list[i] == NULL) {
-			digitalWrite(triggerPin, LOW); // be sure to start from low
-			delayMicroseconds(2);
-			Rangefinder::list[i] = this;
-			Rangefinder::numberOfFinders++;
-			attachInterruptArg(digitalPinToInterrupt(echoPin), sensorISRAll,this,
-							CHANGE);
-
-			while(getRoundTripTimeMicroSeconds()<1){
-				delay(1);
-			}
-			return;
-		}
-	}
-
-
-}
-/*
- * Initialize the rangefinder with the trigger pin and echo pin
- * numbers.
- */
-Rangefinder::Rangefinder() {
-}
 /**
- * \brief get the time of latest round trip in microseconds
- *
- * @return the time in microseconds
+ * checkPingTimer check to see if it's time to send a new ping.
+ * You must select USE_CTRL_PIN in init() for this to work.
  */
-long Rangefinder::getRoundTripTimeMicroSeconds() {
-	long time;
-	portENTER_CRITICAL(&synch);
-	time=roundTripTime;
-	portEXIT_CRITICAL(&synch);
-	return time;
+uint8_t HCSR04::checkPingTimer(void)
+{
+    //check if we're ready to ping
+    if(millis() - lastPing >= pingInterval)
+    {
+        pulseEnd = pulseStart = 0;
+
+        //clear out any leftover states
+        state = 0;
+
+        lastPing = millis();    //not perfectly on schedule, but safer and close enough
+
+        digitalWrite(TRIG_PIN, HIGH); //commands a ping; leave high for the duration
+        delayMicroseconds(30); //datasheet says hold HIGH for >20us; we'll use 30 to be 'safe'
+        digitalWrite(TRIG_PIN, LOW); //unclear if pin has to stay HIGH
+    }
+
+    return state;
 }
-/*
- * Get the distance from the rangefinder
+
+uint16_t HCSR04::checkEcho(void)
+{
+    uint16_t echoLength = 0;
+    if(state & ECHO_RECD)
+    {
+        echoLength = pulseEnd - pulseStart;
+        state &= ~ECHO_RECD;
+    }
+
+    return echoLength;
+}
+
+//ISR for echo pin
+void HCSR04::HCSR_ISR(void)
+{
+    if(digitalRead(PULSE_PIN))  //transitioned to HIGH
+    {
+        pulseStart = micros();
+    }
+
+    else                        //transitioned to LOW
+    {
+        pulseEnd = micros();
+        state |= ECHO_RECD;
+    } 
+}
+
+/**
+ * TODO: Write a getDistance() function for the distance method of your choice.
+ * 
+ * getDistance should return true whenever there is a new reading, and put the result
+ * in distance, which is _passed by reference_ so that you can "return" a value
  */
-float Rangefinder::getDistanceCM() {
-	float distance;
-	distance = (getRoundTripTimeMicroSeconds() * 0.0343) / 2.0;
-	return distance;
+bool HCSR04::getDistance(float& distance)
+{
+    distance = -99;
+    return false;
 }
