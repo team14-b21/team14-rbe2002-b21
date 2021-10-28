@@ -49,10 +49,12 @@ uint8_t HCSR04::checkPingTimer(void)
     //check if we're ready to ping
     if(millis() - lastPing >= pingInterval)
     {
+        Serial.print("pt");
+        Serial.println(state);
         pulseEnd = pulseStart = 0;
 
         //clear out any leftover states
-        state = 0;
+        //state = 0;
 
         lastPing = millis();    //not perfectly on schedule, but safer and close enough
 
@@ -66,9 +68,12 @@ uint8_t HCSR04::checkPingTimer(void)
 
 uint16_t HCSR04::checkEcho(void)
 {
+    Serial.print("ec");
+    Serial.println(state);
     uint16_t echoLength = 0;
     if(state & ECHO_RECD)
     {
+        Serial.println("hi");
         echoLength = pulseEnd - pulseStart;
         state &= ~ECHO_RECD;
     }
@@ -83,12 +88,11 @@ void HCSR04::HCSR_ISR(void)
     {
         pulseStart = micros();
     }
-
     else                        //transitioned to LOW
     {
         pulseEnd = micros();
         state |= ECHO_RECD;
-    } 
+    }
 }
 
 /**

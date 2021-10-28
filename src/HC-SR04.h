@@ -20,7 +20,7 @@ private:
     uint8_t state = 0;
 
     uint32_t lastPing = 0;          // for keeping track of intervals
-    uint32_t pingInterval = 200;    // default to 200 ms
+    uint32_t pingInterval = 1000;    // default to 200 ms
 
     uint32_t pulseStart = 0;
     uint32_t pulseEnd = 0;

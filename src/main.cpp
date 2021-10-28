@@ -16,7 +16,8 @@ void setup()
 
 void loop() 
 {
-  //if (hcsr.checkPingTimer() | ECHO_RECD) {
-    Serial.println(hcsr.checkPingTimer());
+  hcsr.checkPingTimer();
+  //if (hcsr.checkPingTimer() & ECHO_RECD) {
+    hcsr.checkEcho();
   //}
 }
