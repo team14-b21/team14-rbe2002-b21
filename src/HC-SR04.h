@@ -1,26 +1,22 @@
 #ifndef __HCSR04_H
 #define __HCSR04_H
 
-/*
- * Datasheet: https://www.maxbotix.com/documents/LV-MaxSonar-EZ_Datasheet.pdf
- */
-
 #include <Arduino.h>
 #include <SPI.h>
 
 #define ECHO_RECD   0x02
 
 #define USE_CTRL_PIN    0x01
-#define USE_ECHO        0x02
+#define USE_ECHO        0x026
 
 
 class HCSR04 
 {
+public:
+    bool echoRecd = false;
 private:
-    uint8_t state = 0;
-
     uint32_t lastPing = 0;          // for keeping track of intervals
-    uint32_t pingInterval = 1000;    // default to 200 ms
+    uint32_t pingInterval = 200;    // default to 200 ms
 
     uint32_t pulseStart = 0;
     uint32_t pulseEnd = 0;
@@ -30,7 +26,7 @@ public:
     void init(uint8_t interfaces);
 
     //checks to see if it's time for a ping
-    uint8_t checkPingTimer(void);
+    bool checkPingTimer(void);
 
     //Checks to see if a pulse echo has been registered
     uint16_t checkEcho(void);

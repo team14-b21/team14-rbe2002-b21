@@ -1,6 +1,6 @@
 #include "HC-SR04.h"
 
-#define TRIG_PIN 16      //for pinging -- not a great choice since this can hamper uploading
+#define TRIG_PIN 16      //for pinging
 #define PULSE_PIN 17    //for reading pulse
 
 #define MB_WINDOW_DUR 50    //ms
@@ -44,39 +44,41 @@ void HCSR04::init(uint8_t interfaces)
  * checkPingTimer check to see if it's time to send a new ping.
  * You must select USE_CTRL_PIN in init() for this to work.
  */
-uint8_t HCSR04::checkPingTimer(void)
+bool HCSR04::checkPingTimer(void)
 {
     //check if we're ready to ping
     if(millis() - lastPing >= pingInterval)
     {
-        Serial.print("pt");
-        Serial.println(state);
+        // Serial.print("Echo Received: ");
+        // Serial.println(echoRecd);
         pulseEnd = pulseStart = 0;
-
-        //clear out any leftover states
-        //state = 0;
+        if (echoRecd) {
+            Serial.println(echoRecd);
+        }
+        echoRecd = false;
 
         lastPing = millis();    //not perfectly on schedule, but safer and close enough
 
         digitalWrite(TRIG_PIN, HIGH); //commands a ping; leave high for the duration
-        delayMicroseconds(30); //datasheet says hold HIGH for >20us; we'll use 30 to be 'safe'
+        delayMicroseconds(10); //datasheet says hold HIGH for >20us; we'll use 30 to be 'safe'      TODO Change back from 10!!!
         digitalWrite(TRIG_PIN, LOW); //unclear if pin has to stay HIGH
     }
 
-    return state;
+    return echoRecd;
 }
 
 uint16_t HCSR04::checkEcho(void)
 {
-    Serial.print("ec");
-    Serial.println(state);
     uint16_t echoLength = 0;
-    if(state & ECHO_RECD)
+    //Serial.print("Echo Received: ");
+    //Serial.println(echoRecd);
+    if(echoRecd)
     {
         Serial.println("hi");
         echoLength = pulseEnd - pulseStart;
-        state &= ~ECHO_RECD;
+        echoRecd = false;
     }
+    
 
     return echoLength;
 }
@@ -91,7 +93,8 @@ void HCSR04::HCSR_ISR(void)
     else                        //transitioned to LOW
     {
         pulseEnd = micros();
-        state |= ECHO_RECD;
+        echoRecd = true;
+
     }
 }
 

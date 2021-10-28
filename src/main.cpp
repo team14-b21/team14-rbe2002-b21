@@ -2,22 +2,21 @@
 #include "HC-SR04.h"
 #include "RBE-200n-Lib.h"
 
-HCSR04 hcsr;
-
 
 void setup()
 {
-  hcsr.init();
+  hcsr_1.init();
   delay(1000);
-  
+
   Serial.begin(115200);
   Serial.println("Velkommen til");
 }
 
-void loop() 
+void loop()
 {
-  hcsr.checkPingTimer();
-  //if (hcsr.checkPingTimer() & ECHO_RECD) {
-    hcsr.checkEcho();
-  //}
+  hcsr_1.checkPingTimer();
+  uint16_t echoLen = hcsr_1.checkEcho();
+  if (echoLen) {
+    Serial.println(echoLen);
+  }
 }
