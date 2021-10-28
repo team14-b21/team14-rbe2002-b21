@@ -74,7 +74,6 @@ uint16_t HCSR04::checkEcho(void)
     //Serial.println(echoRecd);
     if(echoRecd)
     {
-        Serial.println("hi");
         echoLength = pulseEnd - pulseStart;
         echoRecd = false;
     }

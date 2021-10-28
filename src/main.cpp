@@ -2,6 +2,7 @@
 #include "HC-SR04.h"
 #include "RBE-200n-Lib.h"
 
+int counter = 0;
 
 void setup()
 {
@@ -14,9 +15,13 @@ void setup()
 
 void loop()
 {
-  hcsr_1.checkPingTimer();
-  uint16_t echoLen = hcsr_1.checkEcho();
-  if (echoLen) {
-    Serial.println(echoLen);
+  while (counter < 200){
+    hcsr_1.checkPingTimer();
+    uint16_t echoLen = hcsr_1.checkEcho();
+    if (echoLen > 4000) {
+      Serial.println(echoLen);
+      counter++;
+    }
   }
+  
 }
