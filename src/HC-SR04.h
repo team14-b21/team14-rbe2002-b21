@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#include "DistanceSensor.h"
 
 #define ECHO_RECD   0x02
 
@@ -10,7 +11,7 @@
 #define USE_ECHO        0x026
 
 
-class HCSR04 
+class HCSR04 : public DistanceSensor
 {
 public:
     bool echoRecd = false;
