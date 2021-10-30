@@ -9,7 +9,7 @@ class AvgFilter
 private:
     T data [N];
     std::vector<T> medVec;
-    int readIndex = 0;
+    uint16_t readIndex = 0;
     T total = 0;
 public:
     AvgFilter();
