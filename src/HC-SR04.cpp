@@ -57,10 +57,9 @@ bool HCSR04::checkPingTimer(void)
         }
         echoRecd = false;
 
-        lastPing = millis();    //not perfectly on schedule, but safer and close enough
-
         digitalWrite(TRIG_PIN, HIGH); //commands a ping; leave high for the duration
-        delayMicroseconds(10); //datasheet says hold HIGH for >20us; we'll use 30 to be 'safe'      TODO Change back from 10!!!
+        delayMicroseconds(30);
+        lastPing = millis(); // if this isn't here we get a cpu panic :)
         digitalWrite(TRIG_PIN, LOW); //unclear if pin has to stay HIGH
     }
 
@@ -70,15 +69,11 @@ bool HCSR04::checkPingTimer(void)
 uint16_t HCSR04::checkEcho(void)
 {
     uint16_t echoLength = 0;
-    //Serial.print("Echo Received: ");
-    //Serial.println(echoRecd);
     if(echoRecd)
     {
         echoLength = pulseEnd - pulseStart;
         echoRecd = false;
     }
-    
-
     return echoLength;
 }
 
@@ -105,6 +100,10 @@ void HCSR04::HCSR_ISR(void)
  */
 bool HCSR04::getDistance(float& distance)
 {
-    distance = -99;
+    uint16_t pulse = checkEcho();
+    if (pulse) {
+        distance = (pulse + 96.042)/58.244;
+        return true;
+    }
     return false;
 }

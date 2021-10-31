@@ -1,6 +1,6 @@
 #include "StandoffController.h"
 
-StandoffController::StandoffController(): pid(PIDController(1)) {};
+StandoffController::StandoffController(float Kp): pid(Kp) {};
 
 void StandoffController::setTarget(float target) {
     pid.setTarget(target);

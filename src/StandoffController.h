@@ -10,7 +10,7 @@ private:
     PIDController pid;
     float leftEffort = 0, rightEffort = 0;
 public:
-    StandoffController();
+    StandoffController(float Kp);
 
     void setTarget(float distance);
     void process(float reading);

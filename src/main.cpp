@@ -4,26 +4,33 @@
 #include "RBE-200n-Lib.h"
 #include "StandoffController.h"
 #include "Chassis.h"
+#include "Filters.h"
 
 float dist = 0;
-StandoffController standoff;
+StandoffController standoff = StandoffController(2);
+AvgFilter<float, 5> ultraFilter;
+
 
 void setup()
 {
   chassis.init();
   hcsr_1.init();
-  ir_1.init();
+  //ir_1.init();
   pinMode(0, INPUT_PULLUP);
   delay(1000);
+  standoff.setTarget(20);
 
   Serial.begin(115200);
   Serial.println("Velkommen til");
 }
 
 void loop() {
+  hcsr_1.checkPingTimer();
   if (hcsr_1.getDistance(dist)) {
-    standoff.process(dist);
-    chassis.setMotorEfforts(standoff.l(), standoff.r());
+    ultraFilter.addDatum(dist);
+    //standoff.process(ultraFilter.getMedian());
+    //chassis.setMotorEfforts(-standoff.l(), -standoff.r());
+    Serial.println(ultraFilter.getMedian());
   }
 }
 
