@@ -36,7 +36,7 @@ std::map<int, int> keyMap = { {16, 1}, {17, 2}, {18, 3}, {20, 4}, {21, 5}, {22, 
 void setup()
 {
   delay(100);
-  hscr_1.init();
+  hcsr_1.init();
   delay(100);
   decoder.init();
   delay(100);
