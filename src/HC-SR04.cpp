@@ -71,8 +71,10 @@ uint16_t HCSR04::checkEcho(void)
     uint16_t echoLength = 0;
     if(echoRecd)
     {
+        portENTER_CRITICAL(&mux);
         echoLength = pulseEnd - pulseStart;
         echoRecd = false;
+        portEXIT_CRITICAL(&mux);
     }
     return echoLength;
 }
@@ -80,6 +82,7 @@ uint16_t HCSR04::checkEcho(void)
 //ISR for echo pin
 void HCSR04::HCSR_ISR(void)
 {
+    portENTER_CRITICAL_ISR(&mux);
     if(digitalRead(PULSE_PIN))  //transitioned to HIGH
     {
         pulseStart = micros();
@@ -88,8 +91,8 @@ void HCSR04::HCSR_ISR(void)
     {
         pulseEnd = micros();
         echoRecd = true;
-
     }
+    portEXIT_CRITICAL_ISR(&mux);
 }
 
 /**

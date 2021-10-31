@@ -21,6 +21,7 @@ private:
 
     uint32_t pulseStart = 0;
     uint32_t pulseEnd = 0;
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 public:
     HCSR04(void);  //ideally, this would take pins as parameters, but just hard-coded for now since we only have one
     void init(void);

@@ -62,6 +62,9 @@ uint16_t SharpIR::readMCP3002(bool force)
  */
 bool SharpIR::getDistance(float& distance)
 {
-    distance = -99;
+    uint16_t raw = readMCP3002();
+    if (raw) {
+        distance = (raw - 93.135) / 4592.4;
+    }
     return false;
 }
